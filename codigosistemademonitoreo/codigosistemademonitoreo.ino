@@ -14,7 +14,7 @@ const char* password = "CL435egu";
 // SUPABASE
 // =====================================
 const char* supabaseUrl =
-"https://ohvtbtqjkkknieovdmln.supabase.co/rest/v1/datos_climaticos";
+"https://ohvtbtqjkkknieovdmln.supabase.co/rest/v1/lecturas_climaticas";
 
 const char* supabaseKey =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9odnRidHFqa2trbmllb3ZkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjI5MzAsImV4cCI6MjA5NTQ5ODkzMH0.hfByu2-k9nwzpl-XvUKKJjjjm8n36tB6My-uf16s2I8";
@@ -80,13 +80,17 @@ void setup() {
   if (!bmp.begin(0x76)) {
 
     if (!bmp.begin(0x77)) {
+
       Serial.println("ERROR: BMP280 no detectado");
+
     } else {
+
       bmpOK = true;
       Serial.println("BMP280 iniciado correctamente (0x77)");
     }
 
   } else {
+
     bmpOK = true;
     Serial.println("BMP280 iniciado correctamente (0x76)");
   }
@@ -104,38 +108,76 @@ void loop() {
   Serial.println("==============================");
 
   // =================================
-  // DHT11
+  // LEER DHT11
   // =================================
   float temperatura = dht.readTemperature();
   float humedad = dht.readHumidity();
 
   // =================================
-  // BMP280
+  // LEER BMP280
   // =================================
   float tempBMP = 0;
   float presion = 0;
 
   if (bmpOK) {
+
     tempBMP = bmp.readTemperature();
     presion = bmp.readPressure() / 100.0;
   }
 
   // =================================
-  // SENSOR LLUVIA
+  // LEER SENSOR LLUVIA
   // =================================
   int lluvia = analogRead(LLUVIA_PIN);
 
+  // =================================
+  // INTERPRETAR LLUVIA
+  // =================================
   String estadoLluvia;
+  
+  // TU SENSOR FUNCIONA ASI: 
+  // 0 = seco 
+  // valores altos = lluvia
 
-  if (lluvia == 0) {
+  if (lluvia < 1200) {
+
     estadoLluvia = "No presencia de lluvia";
+
+  } else if (lluvia >= 1200 && lluvia <= 2500) {
+
+    estadoLluvia = "Llovizna";
+
   } else {
-    estadoLluvia = "Lluvia detectada";
+
+    estadoLluvia = "Lluvia Fuerte / Tormenta";
+  }
+
+  // =================================
+  // CLASIFICACION CLIMATICA
+  // =================================
+  String climaGeneral;
+
+  if (temperatura > 30 && humedad < 50) {
+
+    climaGeneral = "Clima seco y caluroso";
+
+  } else if (temperatura > 25 && humedad > 70) {
+
+    climaGeneral = "Clima tropical humedo";
+
+  } else if (temperatura >= 18 && temperatura <= 25 && humedad >= 60) {
+
+    climaGeneral = "Clima templado humedo";
+
+  } else {
+
+    climaGeneral = "Clima variable";
   }
 
   // =================================
   // MOSTRAR EN SERIAL
   // =================================
+
   if (isnan(temperatura) || isnan(humedad)) {
 
     Serial.println("ERROR DHT11");
@@ -166,11 +208,39 @@ void loop() {
     Serial.println("BMP280 no disponible");
   }
 
-  Serial.print("Valor lluvia: ");
+  Serial.print("Valor lluvia ADC: ");
   Serial.println(lluvia);
 
   Serial.print("Estado lluvia: ");
   Serial.println(estadoLluvia);
+
+  Serial.print("Clima general: ");
+  Serial.println(climaGeneral);
+
+  // =================================
+  // RECOMENDACION CULTIVOS
+  // =================================
+  String recomendacion;
+
+  if (temperatura > 25 && humedad > 70) {
+
+    recomendacion = "Arroz, Platano, Cana de azucar";
+
+  } else if (temperatura > 30 && humedad < 50) {
+
+    recomendacion = "Yuca, Sorgo, Algodon";
+
+  } else if (temperatura >= 18 && temperatura <= 25 && humedad >= 60) {
+
+    recomendacion = "Cafe, Cacao, Aguacate";
+
+  } else {
+
+    recomendacion = "Maiz, Tomate, Frijol";
+  }
+
+  Serial.print("Recomendacion: ");
+  Serial.println(recomendacion);
 
   // =================================
   // ENVIAR A SUPABASE
@@ -187,20 +257,26 @@ void loop() {
     http.addHeader("Authorization", "Bearer " + String(supabaseKey));
     http.addHeader("Prefer", "return=minimal");
 
-    // JSON
+    // =================================
+    // CREAR JSON
+    // =================================
     String json = "{";
+
     json += "\"temperatura_dht\":" + String(temperatura) + ",";
     json += "\"humedad\":" + String(humedad) + ",";
     json += "\"temperatura_bmp\":" + String(tempBMP) + ",";
     json += "\"presion\":" + String(presion) + ",";
     json += "\"lluvia\":" + String(lluvia) + ",";
     json += "\"estado_lluvia\":\"" + estadoLluvia + "\"";
+
     json += "}";
 
     Serial.println("\nEnviando datos a Supabase...");
     Serial.println(json);
 
-    // POST
+    // =================================
+    // ENVIAR POST
+    // =================================
     int httpResponseCode = http.POST(json);
 
     Serial.print("Codigo HTTP: ");
@@ -208,7 +284,7 @@ void loop() {
 
     if (httpResponseCode == 201) {
 
-      Serial.println("DATOS ENVIADOS CORRECTAMENTE A SUPABASE");
+      Serial.println("DATOS ENVIADOS CORRECTAMENTE");
 
     } else {
 
@@ -229,6 +305,8 @@ void loop() {
 
   Serial.println("==============================");
 
-  // ENVIAR CADA 10 SEGUNDOS
+  // =================================
+  // ESPERAR 10 SEGUNDOS
+  // =================================
   delay(10000);
 }

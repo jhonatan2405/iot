@@ -1448,6 +1448,11 @@ h1, h2, h3, h4, h5, h6 {
 .table-responsive {
     overflow-x: auto;
     width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+    min-width: 700px;
 }
 
 .alert-thresholds-table {
@@ -1835,9 +1840,18 @@ h1, h2, h3, h4, h5, h6 {
         display: flex;
     }
     
-    .navbar-actions .datetime-display,
-    .navbar-actions .connection-status-panel {
+    .navbar-actions .datetime-display {
         display: none;
+    }
+    
+    .navbar-actions .connection-status-panel {
+        display: flex;
+        gap: 6px;
+    }
+    
+    .status-indicator {
+        padding: 4px 10px;
+        font-size: 9.5px;
     }
     
     .sidebar {
@@ -1877,6 +1891,18 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 480px) {
+    .navbar-actions .connection-status-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-right: 4px;
+    }
+    
+    .status-indicator {
+        padding: 3px 6px;
+        font-size: 8px;
+    }
+
     .navbar-brand h1 {
         font-size: 12px;
     }

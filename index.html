@@ -463,8 +463,8 @@
                                     <div class="progress-bar-fill bg-gradient-rain" id="gauge-progress-rain" style="width: 0%"></div>
                                 </div>
                                 <div class="gauge-range-labels">
-                                    <span>4095 (Seco)</span>
-                                    <span>0 (Mojado)</span>
+                                    <span>0 (Seco)</span>
+                                    <span>4095 (Lluvia Fuerte)</span>
                                 </div>
                             </div>
                             <ul class="sensor-meta-list">
@@ -695,9 +695,9 @@
                                         </tr>
                                         <tr>
                                             <td><strong>Precipitacion (ADC)</strong></td>
-                                            <td><span id="table-val-r-normal">Mayor a 3000 (Seco)</span></td>
-                                            <td><span id="table-val-r-warning">1500 a 3000 (Lluvia Ligera)</span></td>
-                                            <td><span id="table-val-r-danger">Menor a 1500 (Lluvia Fuerte / Tormenta)</span></td>
+                                             <td><span id="table-val-r-normal">Menor a 1200 (Seco)</span></td>
+                                             <td><span id="table-val-r-warning">1200 a 2500 (Llovizna)</span></td>
+                                             <td><span id="table-val-r-danger">Mayor o igual a 2500 (Lluvia Fuerte)</span></td>
                                         </tr>
                                         <tr>
                                             <td><strong>Presion Atmosferica</strong></td>
@@ -858,15 +858,15 @@
                                     <h4 class="form-column-title">Precipitacion (ADC Lluvia)</h4>
                                     
                                     <div class="form-group">
-                                        <label for="cfg-rain-red">Umbral de Tormenta / Lluvia Fuerte (Alerta Roja)</label>
-                                        <input type="number" id="cfg-rain-red" min="0" max="4095" value="1500" required>
-                                        <span class="input-tip">El sensor de lluvia ADC baja de este valor durante lluvias severas.</span>
+                                        <label for="cfg-rain-red">Umbral de Lluvia Fuerte / Tormenta (Alerta Roja)</label>
+                                        <input type="number" id="cfg-rain-red" min="0" max="4095" value="2500" required>
+                                        <span class="input-tip">El sensor de lluvia ADC supera este valor durante lluvias severas.</span>
                                     </div>
                                     
                                     <div class="form-group">
-                                        <label for="cfg-rain-yellow">Umbral de Llovizna / Lluvia Frecuente (Alerta Amarilla)</label>
-                                        <input type="number" id="cfg-rain-yellow" min="0" max="4095" value="3000" required>
-                                        <span class="input-tip">Sensor ADC entra en este rango preventivo de aporte pluvial natural.</span>
+                                        <label for="cfg-rain-yellow">Umbral de Llovizna (Alerta Amarilla)</label>
+                                        <input type="number" id="cfg-rain-yellow" min="0" max="4095" value="1200" required>
+                                        <span class="input-tip">Sensor ADC supera este valor preventivo durante lloviznas.</span>
                                     </div>
                                 </div>
 

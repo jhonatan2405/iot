@@ -46,8 +46,8 @@ const alertThresholds = {
     humRedLow: 20,
     humYellowHigh: 85,
     humYellowLow: 50,
-    rainRed: 1500,
-    rainYellow: 3000
+    rainRed: 2500,
+    rainYellow: 1200
 };
 
 // Base de Datos Detallada para Recomendación de Cultivos
@@ -317,8 +317,8 @@ function initAlertThresholds() {
                 return;
             }
 
-            if (rainR >= rainY) {
-                showAppNotification('Error de Validacion', 'El umbral de Llovizna (ADC) debe ser mayor al de Tormenta (ADC). A menor valor, mas mojado.', 'danger');
+            if (rainR <= rainY) {
+                showAppNotification('Error de Validacion', 'El umbral de Lluvia Fuerte (ADC) debe ser mayor al de Llovizna (ADC). A mayor valor, mas lluvia.', 'danger');
                 return;
             }
 
@@ -358,8 +358,8 @@ function initAlertThresholds() {
             alertThresholds.humRedLow = 20;
             alertThresholds.humYellowHigh = 85;
             alertThresholds.humYellowLow = 50;
-            alertThresholds.rainRed = 1500;
-            alertThresholds.rainYellow = 3000;
+            alertThresholds.rainRed = 2500;
+            alertThresholds.rainYellow = 1200;
 
             localStorage.removeItem('alert-thresholds');
             
@@ -396,9 +396,9 @@ function updateThresholdTableDisplay() {
     document.getElementById('table-val-h-warning').textContent = `${alertThresholds.humYellowHigh}% a ${alertThresholds.humRedHigh}% UR o ${alertThresholds.humYellowLow}% a ${alertThresholds.humRedLow}% UR`;
     document.getElementById('table-val-h-danger').textContent = `Mayor a ${alertThresholds.humRedHigh}% UR o Menor a ${alertThresholds.humRedLow}% UR`;
 
-    document.getElementById('table-val-r-normal').textContent = `Mayor a ${alertThresholds.rainYellow} (Seco)`;
-    document.getElementById('table-val-r-warning').textContent = `${alertThresholds.rainRed} a ${alertThresholds.rainYellow} (Lluvia Ligera)`;
-    document.getElementById('table-val-r-danger').textContent = `Menor a ${alertThresholds.rainRed} (Lluvia Fuerte / Tormenta)`;
+    document.getElementById('table-val-r-normal').textContent = `Menor a ${alertThresholds.rainYellow} (Seco)`;
+    document.getElementById('table-val-r-warning').textContent = `${alertThresholds.rainYellow} a ${alertThresholds.rainRed - 1} (Llovizna)`;
+    document.getElementById('table-val-r-danger').textContent = `Mayor o igual a ${alertThresholds.rainRed} (Lluvia Fuerte)`;
 }
 
 /* -------------------------------------------------------------
@@ -752,9 +752,9 @@ function updateClimateValues(tempDht, humidity, tempBmp, pressure, rainRaw, rain
     const rainIconWrap = document.getElementById('rain-icon-container');
     rainStatusEl.textContent = rainStatus.toUpperCase();
 
-    if (rainStatus === 'Tormenta' || rainStatus === 'Lluvia Fuerte') {
+    if (rainStatus.includes('Tormenta') || rainStatus.includes('Fuerte')) {
         rainIconWrap.innerHTML = '<i class="fa-solid fa-cloud-showers-heavy" style="color: #3b82f6;"></i>';
-    } else if (rainStatus === 'Llovizna') {
+    } else if (rainStatus.includes('Llovizna')) {
         rainIconWrap.innerHTML = '<i class="fa-solid fa-cloud-rain" style="color: #60a5fa;"></i>';
     } else {
         rainIconWrap.innerHTML = '<i class="fa-solid fa-cloud-sun" style="color: #f59e0b;"></i>';
@@ -781,7 +781,7 @@ function updateClimateValues(tempDht, humidity, tempBmp, pressure, rainRaw, rain
     const presPct = Math.min(100, Math.max(0, ((pressure - 900) / 200) * 100));
     document.getElementById('gauge-progress-pressure').style.width = `${presPct}%`;
 
-    const rainPct = Math.min(100, Math.max(0, ((4095 - rainRaw) / 4095) * 100));
+    const rainPct = Math.min(100, Math.max(0, (rainRaw / 4095) * 100));
     document.getElementById('gauge-progress-rain').style.width = `${rainPct}%`;
 
     // 3. Ejecutar Motores Inteligentes Mejorados
@@ -1033,7 +1033,7 @@ function evaluateAlertThresholds(temp, humidity, rainRaw, pressure) {
         temp < alertThresholds.tempRedLow || 
         humidity < alertThresholds.humRedLow || 
         humidity > alertThresholds.humRedHigh || 
-        rainRaw < alertThresholds.rainRed || 
+        rainRaw >= alertThresholds.rainRed || 
         pressure < 985 || 
         pressure > 1040
     ) {
@@ -1051,9 +1051,9 @@ function evaluateAlertThresholds(temp, humidity, rainRaw, pressure) {
         } else if (humidity > alertThresholds.humRedHigh) {
             alertMsg = `ALERTA ROJA: Humedad del aire superior a ${alertThresholds.humRedHigh}% UR`;
             alertDetails = 'Condiciones ideales para la eclosión de esporas fúngicas como roya y fitóftora. Incrementar de inmediato la ventilación.';
-        } else if (rainRaw < alertThresholds.rainRed) {
-            alertMsg = `ALERTA ROJA: Precipitacion Torrencial extrema (${rainRaw} ADC)`;
-            alertDetails = 'Sensor resistivo de lluvia reporta saturación completa. Riesgo de erosión de suelos y asfixia radicular en raíces.';
+        } else if (rainRaw >= alertThresholds.rainRed) {
+            alertMsg = `ALERTA ROJA: Lluvia Fuerte (${rainRaw} ADC)`;
+            alertDetails = 'El sensor reporta lluvias de alta intensidad. Riesgo de erosión de suelos y saturación hídrica. Se sugiere supervisar el drenaje de cultivos.';
         } else {
             alertMsg = 'ALERTA ROJA: Anomalia Barometrica Extrema';
             alertDetails = 'Variación violenta de presión. Indicativo de frente de tormenta ciclónica severa inminente. Proteger invernaderos.';
@@ -1065,7 +1065,7 @@ function evaluateAlertThresholds(temp, humidity, rainRaw, pressure) {
         temp < alertThresholds.tempYellowLow || 
         humidity < alertThresholds.humYellowLow || 
         humidity > alertThresholds.humYellowHigh || 
-        (rainRaw >= alertThresholds.rainRed && rainRaw <= alertThresholds.rainYellow) || 
+        (rainRaw >= alertThresholds.rainYellow && rainRaw < alertThresholds.rainRed) || 
         pressure < 995 || 
         pressure > 1020
     ) {
@@ -1083,9 +1083,9 @@ function evaluateAlertThresholds(temp, humidity, rainRaw, pressure) {
         } else if (humidity > alertThresholds.humYellowHigh) {
             alertMsg = `ALERTA AMARILLA: Aire Humedo de Riesgo (> ${alertThresholds.humYellowHigh}% UR)`;
             alertDetails = 'Humedad de riesgo. Monitorear la aparición de manchas foliares sospechosas en los tallos.';
-        } else if (rainRaw >= alertThresholds.rainRed && rainRaw <= alertThresholds.rainYellow) {
-            alertMsg = 'ALERTA AMARILLA: Deteccion de Llovizna Natural';
-            alertDetails = 'Aporte de agua pluvial natural activa en curso. Se puede pausar el riego automático temporalmente.';
+        } else if (rainRaw >= alertThresholds.rainYellow && rainRaw < alertThresholds.rainRed) {
+            alertMsg = 'ALERTA AMARILLA: Llovizna Detectada';
+            alertDetails = 'Aporte de agua pluvial moderada en curso. Se recomienda pausar riegos automáticos temporales.';
         } else {
             alertMsg = 'ALERTA AMARILLA: Variacion Barometrica Inestable';
             alertDetails = 'Monitorear barómetro en las próximas horas ante cambios climáticos abruptos.';
@@ -1229,9 +1229,9 @@ function renderHistoryTable(data) {
         const formattedDate = dateObj.toLocaleDateString('es-ES') + ' ' + dateObj.toLocaleTimeString('es-ES');
         
         let rainClass = 'cell-rain-none';
-        if (row.lluvia < alertThresholds.rainRed) {
+        if (row.lluvia >= alertThresholds.rainRed) {
             rainClass = 'cell-rain-high';
-        } else if (row.lluvia < alertThresholds.rainYellow) {
+        } else if (row.lluvia >= alertThresholds.rainYellow) {
             rainClass = 'cell-rain-mid';
         }
 
