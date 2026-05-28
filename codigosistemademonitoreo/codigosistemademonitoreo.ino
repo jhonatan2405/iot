@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <DHT.h>
 #include <Wire.h>
@@ -36,7 +37,6 @@ DHT dht(DHTPIN, DHTTYPE);
 // BMP280
 // =====================================
 Adafruit_BMP280 bmp;
-
 bool bmpOK = false;
 
 // =====================================
@@ -52,50 +52,43 @@ void setup() {
   Serial.println("==================================");
 
   // =================================
-  // CONECTAR WIFI
+  // WIFI
   // =================================
   WiFi.begin(ssid, password);
 
-  Serial.print("Conectando a WiFi");
+  Serial.print("Conectando WiFi");
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
 
-  Serial.println("\nWiFi conectado correctamente");
-  Serial.print("IP ESP32: ");
+  Serial.println("\nWiFi conectado");
+  Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
   // =================================
-  // INICIAR DHT11
+  // DHT11
   // =================================
   dht.begin();
 
-  Serial.println("DHT11 iniciado");
-
   // =================================
-  // INICIAR BMP280
+  // BMP280
   // =================================
-  if (!bmp.begin(0x76)) {
+  if (bmp.begin(0x76)) {
 
-    if (!bmp.begin(0x77)) {
+    bmpOK = true;
+    Serial.println("BMP280 OK 0x76");
 
-      Serial.println("ERROR: BMP280 no detectado");
+  } else if (bmp.begin(0x77)) {
 
-    } else {
-
-      bmpOK = true;
-      Serial.println("BMP280 iniciado correctamente (0x77)");
-    }
+    bmpOK = true;
+    Serial.println("BMP280 OK 0x77");
 
   } else {
 
-    bmpOK = true;
-    Serial.println("BMP280 iniciado correctamente (0x76)");
+    Serial.println("BMP280 NO DETECTADO");
   }
-
-  Serial.println("Sistema listo");
 }
 
 // =====================================
@@ -104,39 +97,34 @@ void setup() {
 void loop() {
 
   Serial.println("\n==============================");
-  Serial.println("LEYENDO SENSORES...");
+  Serial.println("LEYENDO SENSORES");
   Serial.println("==============================");
 
   // =================================
-  // LEER DHT11
+  // DHT11
   // =================================
   float temperatura = dht.readTemperature();
   float humedad = dht.readHumidity();
 
   // =================================
-  // LEER BMP280
+  // BMP280
   // =================================
   float tempBMP = 0;
   float presion = 0;
 
   if (bmpOK) {
-
     tempBMP = bmp.readTemperature();
     presion = bmp.readPressure() / 100.0;
   }
 
   // =================================
-  // LEER SENSOR LLUVIA
+  // LLUVIA
   // =================================
   int lluvia = analogRead(LLUVIA_PIN);
 
-  // =================================
-  // INTERPRETAR LLUVIA
-  // =================================
   String estadoLluvia;
-  
-  // TU SENSOR FUNCIONA ASI: 
-  // 0 = seco 
+
+  // 0 = seco
   // valores altos = lluvia
 
   if (lluvia < 1200) {
@@ -149,164 +137,93 @@ void loop() {
 
   } else {
 
-    estadoLluvia = "Lluvia Fuerte / Tormenta";
+    estadoLluvia = "Lluvia fuerte";
   }
 
   // =================================
-  // CLASIFICACION CLIMATICA
+  // MOSTRAR DATOS
   // =================================
-  String climaGeneral;
+  Serial.print("Temperatura: ");
+  Serial.println(temperatura);
 
-  if (temperatura > 30 && humedad < 50) {
+  Serial.print("Humedad: ");
+  Serial.println(humedad);
 
-    climaGeneral = "Clima seco y caluroso";
-
-  } else if (temperatura > 25 && humedad > 70) {
-
-    climaGeneral = "Clima tropical humedo";
-
-  } else if (temperatura >= 18 && temperatura <= 25 && humedad >= 60) {
-
-    climaGeneral = "Clima templado humedo";
-
-  } else {
-
-    climaGeneral = "Clima variable";
-  }
-
-  // =================================
-  // MOSTRAR EN SERIAL
-  // =================================
-
-  if (isnan(temperatura) || isnan(humedad)) {
-
-    Serial.println("ERROR DHT11");
-
-  } else {
-
-    Serial.print("Temperatura DHT11: ");
-    Serial.print(temperatura);
-    Serial.println(" °C");
-
-    Serial.print("Humedad: ");
-    Serial.print(humedad);
-    Serial.println(" %");
-  }
-
-  if (bmpOK) {
-
-    Serial.print("Temperatura BMP280: ");
-    Serial.print(tempBMP);
-    Serial.println(" °C");
-
-    Serial.print("Presion atmosferica: ");
-    Serial.print(presion);
-    Serial.println(" hPa");
-
-  } else {
-
-    Serial.println("BMP280 no disponible");
-  }
-
-  Serial.print("Valor lluvia ADC: ");
+  Serial.print("Lluvia ADC: ");
   Serial.println(lluvia);
 
   Serial.print("Estado lluvia: ");
   Serial.println(estadoLluvia);
 
-  Serial.print("Clima general: ");
-  Serial.println(climaGeneral);
-
   // =================================
-  // RECOMENDACION CULTIVOS
-  // =================================
-  String recomendacion;
-
-  if (temperatura > 25 && humedad > 70) {
-
-    recomendacion = "Arroz, Platano, Cana de azucar";
-
-  } else if (temperatura > 30 && humedad < 50) {
-
-    recomendacion = "Yuca, Sorgo, Algodon";
-
-  } else if (temperatura >= 18 && temperatura <= 25 && humedad >= 60) {
-
-    recomendacion = "Cafe, Cacao, Aguacate";
-
-  } else {
-
-    recomendacion = "Maiz, Tomate, Frijol";
-  }
-
-  Serial.print("Recomendacion: ");
-  Serial.println(recomendacion);
-
-  // =================================
-  // ENVIAR A SUPABASE
+  // VALIDAR WIFI
   // =================================
   if (WiFi.status() == WL_CONNECTED) {
 
+    WiFiClientSecure client;
+    client.setInsecure();
+
     HTTPClient http;
 
-    http.begin(supabaseUrl);
+    http.begin(client, supabaseUrl);
 
-    // HEADERS
     http.addHeader("Content-Type", "application/json");
     http.addHeader("apikey", supabaseKey);
     http.addHeader("Authorization", "Bearer " + String(supabaseKey));
     http.addHeader("Prefer", "return=minimal");
 
     // =================================
-    // CREAR JSON
+    // JSON
     // =================================
     String json = "{";
 
-    json += "\"temperatura_dht\":" + String(temperatura) + ",";
-    json += "\"humedad\":" + String(humedad) + ",";
-    json += "\"temperatura_bmp\":" + String(tempBMP) + ",";
-    json += "\"presion\":" + String(presion) + ",";
+    json += "\"temperatura_dht\":" + String(temperatura, 2) + ",";
+    json += "\"humedad\":" + String(humedad, 2) + ",";
+    json += "\"temperatura_bmp\":" + String(tempBMP, 2) + ",";
+    json += "\"presion\":" + String(presion, 2) + ",";
     json += "\"lluvia\":" + String(lluvia) + ",";
     json += "\"estado_lluvia\":\"" + estadoLluvia + "\"";
 
     json += "}";
 
-    Serial.println("\nEnviando datos a Supabase...");
+    Serial.println("\nENVIANDO A SUPABASE...");
     Serial.println(json);
 
     // =================================
-    // ENVIAR POST
+    // POST
     // =================================
     int httpResponseCode = http.POST(json);
 
-    Serial.print("Codigo HTTP: ");
+    Serial.print("HTTP CODE: ");
     Serial.println(httpResponseCode);
 
-    if (httpResponseCode == 201) {
-
-      Serial.println("DATOS ENVIADOS CORRECTAMENTE");
-
-    } else {
-
-      Serial.println("ERROR ENVIANDO DATOS");
+    if (httpResponseCode > 0) {
 
       String response = http.getString();
 
-      Serial.println("Respuesta servidor:");
+      Serial.println("RESPUESTA:");
       Serial.println(response);
+
+      if (httpResponseCode == 201) {
+
+        Serial.println("DATOS ENVIADOS");
+
+      } else {
+
+        Serial.println("SUPABASE RESPONDIO ERROR");
+      }
+
+    } else {
+
+      Serial.println("ERROR DE CONEXION HTTPS");
     }
 
     http.end();
 
   } else {
 
-    Serial.println("WiFi desconectado");
+    Serial.println("WIFI DESCONECTADO");
   }
 
-  Serial.println("==============================");
-
-  // =================================
-  // ESPERAR 10 SEGUNDOS
-  // =================================
   delay(10000);
 }

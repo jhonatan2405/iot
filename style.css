@@ -239,6 +239,8 @@ h1, h2, h3, h4, h5, h6 {
     top: 0;
     z-index: 100;
     transition: background-color 0.4s ease, border-color 0.4s ease;
+    /* Variable dinámica para altura del navbar usada por sidebar */
+    --navbar-h: 70px;
 }
 
 .navbar-brand {
@@ -407,6 +409,8 @@ h1, h2, h3, h4, h5, h6 {
     padding: 24px 0;
     transition: var(--transition);
     flex-shrink: 0;
+    /* Para posición fija en mobile usa la variable del navbar */
+    --sidebar-top: 70px;
 }
 
 .sidebar-nav ul {
@@ -1835,97 +1839,203 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+/* ---- TABLET / MÓVIL GRANDE (≤768px) ---- */
 @media (max-width: 768px) {
     .mobile-toggle {
         display: flex;
     }
-    
-    .navbar-actions .datetime-display {
-        display: none;
+
+    /* Navbar expandido en 2 filas */
+    .main-navbar {
+        height: auto !important;
+        min-height: 60px;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 10px 14px !important;
+        gap: 0;
+        row-gap: 10px;
     }
-    
-    .navbar-actions .connection-status-panel {
-        display: flex;
-        gap: 6px;
+
+    /* Fila 1 izquierda: brand */
+    .navbar-brand {
+        order: 1;
+        flex: 1 1 auto;
+        max-width: calc(100% - 100px);
     }
-    
+
+    .brand-titles h1 {
+        font-size: 12.5px !important;
+        line-height: 1.3;
+    }
+
+    .brand-subtitle {
+        font-size: 8.5px !important;
+        white-space: normal;
+        line-height: 1.25;
+        margin-top: 1px;
+    }
+
+    /* Usar display:contents para que los hijos de .navbar-actions
+       participen directamente en el flex del .main-navbar */
+    .navbar-actions {
+        display: contents !important;
+    }
+
+    /* Fila 1 derecha: botón tema + hamburguesa */
+    #theme-toggle {
+        order: 2;
+        flex: 0 0 auto;
+        margin-left: auto;
+    }
+
+    #mobile-menu-toggle {
+        order: 3;
+        flex: 0 0 auto;
+        margin-left: 8px;
+    }
+
+    /* Fila 2: indicadores de conexión (centrados, ancho completo) */
+    .connection-status-panel {
+        order: 4;
+        width: 100%;
+        display: flex !important;
+        justify-content: center;
+        gap: 10px;
+        border-top: 1px solid var(--border-color);
+        padding-top: 10px;
+    }
+
     .status-indicator {
-        padding: 4px 10px;
-        font-size: 9.5px;
+        padding: 5px 14px !important;
+        font-size: 10px !important;
+        flex: 1;
+        max-width: 170px;
+        justify-content: center;
     }
-    
+
+    /* Fila 3: fecha y hora (centrada, ancho completo) */
+    .datetime-display {
+        order: 5;
+        width: 100%;
+        display: flex !important;
+        justify-content: center;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px !important;
+        color: var(--text-secondary);
+        padding-bottom: 2px;
+        border-top: 1px solid var(--border-color);
+        padding-top: 10px;
+    }
+
+    /* Sidebar fijo: se posiciona desde el top de la ventana
+       pero con padding para no quedar detrás del navbar sticky */
     .sidebar {
         position: fixed;
-        top: 70px;
+        top: 0;
         left: -240px;
-        height: calc(100vh - 70px);
+        height: 100vh;
+        /* ~60px base + 10px row-gap + 38px pills + 10px row-gap + 33px datetime + 10px border */
+        padding-top: 161px;
         z-index: 99;
         box-shadow: none;
+        overflow-y: auto;
     }
-    
+
     .sidebar.mobile-open {
         left: 0;
-        box-shadow: 10px 0 30px rgba(0,0,0,0.15);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.18);
     }
-    
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(3, 5, 10, 0.82);
+        backdrop-filter: blur(4px);
+        z-index: 98;
+    }
+
     .sidebar-overlay.mobile-open {
         display: block;
     }
-    
+
     .main-dashboard-panel {
         padding: 20px 15px;
     }
-    
+
     .metrics-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .sensors-layout-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .form-columns-grid {
         grid-template-columns: 1fr;
         gap: 20px;
     }
 }
 
+/* ---- MÓVIL PEQUEÑO (≤480px) ---- */
 @media (max-width: 480px) {
-    .navbar-actions .connection-status-panel {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        margin-right: 4px;
-    }
-    
-    .status-indicator {
-        padding: 3px 6px;
-        font-size: 8px;
+    .main-navbar {
+        padding: 8px 12px !important;
+        row-gap: 8px;
     }
 
-    .navbar-brand h1 {
-        font-size: 12px;
-    }
-    
-    .brand-subtitle {
-        font-size: 8.5px;
-    }
-    
-    .brand-icon {
+    .brand-logo-img {
         width: 32px;
         height: 32px;
-        font-size: 14px;
     }
-    
+
+    .brand-titles h1 {
+        font-size: 11.5px !important;
+    }
+
+    .brand-subtitle {
+        font-size: 8px !important;
+    }
+
+    /* Pills en columna en pantallas muy pequeñas */
+    .connection-status-panel {
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-indicator {
+        width: 100%;
+        max-width: 230px;
+        padding: 5px 12px !important;
+        font-size: 9.5px !important;
+        justify-content: center;
+    }
+
+    /* datetime un poco más pequeña */
+    .datetime-display {
+        font-size: 10px !important;
+    }
+
+    /* Ajustar el padding-top del sidebar para la navbar más alta */
+    .sidebar {
+        /* base + pills column (2x38px + gap) + datetime */
+        padding-top: 215px;
+    }
+
     .history-controls {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .search-input-wrap {
         max-width: 100%;
     }
-    
+
     .control-actions button {
         width: 100%;
         justify-content: center;
