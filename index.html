@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema IoT de Monitoreo Climático y Recomendación Inteligente de Cultivos en Tiempo Real para agricultura inteligente de precisión.">
+    <title>Sistema IoT de Monitoreo Climático - Smart Farming</title>
+    
+    <!-- Fuentes Modernas de Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Favicon del Sistema -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.png">
+    
+    <!-- Iconos Profesionales (FontAwesome) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <!-- Hojas de Estilo -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Supabase JS Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="light-mode">
+
+    <!-- Loader de Carga Inicial -->
+    <div id="app-loader" class="loader-overlay">
+        <div class="loader-container">
+            <div class="loader-spinner"></div>
+            <div class="loader-text">SISTEMA IoT CLIMATICO</div>
+            <div class="loader-subtext">Conectando a base de datos de Supabase en tiempo real...</div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la App -->
+    <div class="app-container">
+
+        <!-- Barra de Navegación Superior (Navbar) -->
+        <header class="main-navbar">
+            <div class="navbar-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-seedling"></i>
+                </div>
+                <div class="brand-titles">
+                    <h1>SISTEMA IoT DE MONITOREO CLIMÁTICO</h1>
+                    <span class="brand-subtitle">RECOMENDACIÓN INTELIGENTE DE CULTIVOS EN TIEMPO REAL</span>
+                </div>
+            </div>
+
+            <div class="navbar-actions">
+                <!-- Estado del Dispositivo / Conexión -->
+                <div class="connection-status-panel">
+                    <div id="esp32-status" class="status-indicator offline">
+                        <span class="status-dot"></span>
+                        <span class="status-label">ESP32: DESCONECTADO</span>
+                    </div>
+                    <div id="db-status" class="status-indicator offline">
+                        <span class="status-dot"></span>
+                        <span class="status-label">SUPABASE: CONECTANDO</span>
+                    </div>
+                </div>
+
+                <!-- Fecha y Hora -->
+                <div class="datetime-display">
+                    <i class="fa-regular fa-calendar-days"></i>
+                    <span id="current-time">Cargando fecha...</span>
+                </div>
+
+                <!-- Botón de Tema (Sol/Luna) - Por defecto Blanco -->
+                <button id="theme-toggle" class="theme-btn" aria-label="Cambiar tema">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+
+                <!-- Toggle Menú Móvil -->
+                <button id="mobile-menu-toggle" class="mobile-toggle" aria-label="Menu de navegacion">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Contenido Principal: Sidebar + Panel Principal -->
+        <div class="main-content-layout">
+
+            <!-- Barra Lateral de Navegación (Sidebar) -->
+            <aside class="sidebar" id="app-sidebar">
+                <nav class="sidebar-nav">
+                    <ul>
+                        <li>
+                            <button class="nav-link active" data-section="dashboard">
+                                <i class="fa-solid fa-chart-pie"></i>
+                                <span>Inicio</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button class="nav-link" data-section="sensors">
+                                <i class="fa-solid fa-temperature-half"></i>
+                                <span>Sensores</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button class="nav-link" data-section="charts">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <span>Graficas</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button class="nav-link" data-section="recommendations">
+                                <i class="fa-solid fa-leaf"></i>
+                                <span>Recomendaciones</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button class="nav-link" data-section="alerts">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Alertas</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button class="nav-link" data-section="history">
+                                <i class="fa-solid fa-table-list"></i>
+                                <span>Historial</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button class="nav-link" data-section="config">
+                                <i class="fa-solid fa-sliders"></i>
+                                <span>Configuracion</span>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+
+
+            </aside>
+
+            <!-- Capa superpuesta para cerrar el menú móvil al hacer click fuera -->
+            <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+            <!-- Panel de Secciones Dinámicas -->
+            <main class="main-dashboard-panel">
+
+                <!-- 1. SECCIÓN DASHBOARD PRINCIPAL (INICIO) -->
+                <section id="section-dashboard" class="dashboard-section active">
+                    <div class="section-header">
+                        <h2>Panel Principal de Monitoreo</h2>
+                        <p class="section-description">Resumen en tiempo real del estado climático actual reportado por los sensores IoT.</p>
+                    </div>
+
+                    <!-- Panel de Alerta Rápida en la parte superior -->
+                    <div id="quick-alert-banner" class="quick-alert-banner success-banner">
+                        <div class="banner-content">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span id="quick-alert-text">Cargando estado del sistema...</span>
+                        </div>
+                    </div>
+
+                    <!-- Cuadrícula de Tarjetas Métricas (Cards) -->
+                    <div class="metrics-grid">
+                        
+                        <!-- Tarjeta: Temperatura -->
+                        <div class="metric-card card-temp" id="card-temperature">
+                            <div class="card-glow"></div>
+                            <div class="card-header">
+                                <span class="card-title">Temperatura DHT</span>
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-temperature-half"></i>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <span class="metric-value" id="val-temp-dht">--.-</span>
+                                <span class="metric-unit">°C</span>
+                            </div>
+                            <div class="card-footer">
+                                <span class="footer-label">Sensor BMP:</span>
+                                <span class="footer-value" id="val-temp-bmp">--.- °C</span>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta: Humedad -->
+                        <div class="metric-card card-hum" id="card-humidity">
+                            <div class="card-glow"></div>
+                            <div class="card-header">
+                                <span class="card-title">Humedad Relativa</span>
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-droplet"></i>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <span class="metric-value" id="val-humidity">--</span>
+                                <span class="metric-unit">% UR</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="trend-indicator text-stable">
+                                    <i class="fa-solid fa-window-minimize"></i>
+                                    <span>Humedad ambiental</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta: Presión Atmosférica -->
+                        <div class="metric-card card-pres" id="card-pressure">
+                            <div class="card-glow"></div>
+                            <div class="card-header">
+                                <span class="card-title">Presion Atmosferica</span>
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-gauge-high"></i>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <span class="metric-value" id="val-pressure">----</span>
+                                <span class="metric-unit">hPa</span>
+                            </div>
+                            <div class="card-footer">
+                                <span class="footer-label">Nivel barometrico</span>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta: Estado de Lluvia -->
+                        <div class="metric-card card-rain" id="card-rain-status">
+                            <div class="card-glow"></div>
+                            <div class="card-header">
+                                <span class="card-title">Precipitacion</span>
+                                <div class="card-icon" id="rain-icon-container">
+                                    <i class="fa-solid fa-cloud-sun"></i>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <span class="metric-value-text" id="val-rain-status">Sin datos</span>
+                            </div>
+                            <div class="card-footer">
+                                <span class="footer-label">Sensor de lluvia:</span>
+                                <span class="footer-value" id="val-rain-raw">----</span>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta: Cultivo Recomendado -->
+                        <div class="metric-card card-crop" id="card-crop-recommendation">
+                            <div class="card-glow"></div>
+                            <div class="card-header">
+                                <span class="card-title">Cultivo Optimo</span>
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-wheat-awn"></i>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <span class="metric-value-text text-highlight" id="val-crop-name">Cargando...</span>
+                            </div>
+                            <div class="card-footer">
+                                <span class="footer-label" id="val-crop-suitability">Calculando parametros</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Panel de Recomendación Rápida y Gráfica Combinada de Resumen -->
+                    <div class="dashboard-details-layout">
+                        
+                        <!-- Panel de Recomendación Inteligente -->
+                        <div class="detail-panel glass-card">
+                            <h3>Recomendacion de Precision</h3>
+                            <div class="crop-quick-details">
+                                <div class="crop-status-header">
+                                    <div class="crop-avatar-container">
+                                        <div class="crop-avatar" id="quick-crop-avatar">
+                                            <i class="fa-solid fa-seedling"></i>
+                                        </div>
+                                    </div>
+                                    <div class="crop-status-title">
+                                        <h4 id="quick-crop-title">Cargando recomendacion...</h4>
+                                        <p id="quick-crop-subtitle">Evaluando condiciones de suelo y atmosfera</p>
+                                    </div>
+                                </div>
+                                <div class="crop-status-body">
+                                    <p id="quick-crop-desc" class="crop-desc-text">El sistema esta calculando la recomendacion basada en la temperatura, humedad y precipitacion actual en tiempo real.</p>
+                                    
+                                    <div class="crop-parameters-comparison">
+                                        <div class="param-comp-item">
+                                            <span class="comp-label">Temperatura</span>
+                                            <div class="comp-bar-container">
+                                                <div class="comp-bar-fill" id="comp-bar-temp" style="width: 50%;"></div>
+                                            </div>
+                                            <span class="comp-value" id="comp-val-temp">--.- °C</span>
+                                        </div>
+                                        <div class="param-comp-item">
+                                            <span class="comp-label">Humedad</span>
+                                            <div class="comp-bar-container">
+                                                <div class="comp-bar-fill" id="comp-bar-hum" style="width: 50%;"></div>
+                                            </div>
+                                            <span class="comp-value" id="comp-val-hum">-- %</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gráfica Rápida de Temperatura -->
+                        <div class="detail-panel glass-card">
+                            <div class="panel-header-action">
+                                <h3>Variacion Termica Reciente</h3>
+                                <span class="realtime-badge">
+                                    <span class="pulse-dot"></span>En Vivo
+                                </span>
+                            </div>
+                            <div class="dashboard-mini-chart">
+                                <canvas id="miniTempChart"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 2. SECCIÓN SENSORES DETALLADOS -->
+                <section id="section-sensors" class="dashboard-section">
+                    <div class="section-header">
+                        <h2>Lecturas Detalladas de Sensores</h2>
+                        <p class="section-description">Valores individuales de los transductores conectados al ESP32 con analisis de limites operativos.</p>
+                    </div>
+
+                    <div class="sensors-layout-grid">
+                        
+                        <!-- Sensor: Temperatura DHT22 -->
+                        <div class="sensor-detail-card glass-card">
+                            <div class="sensor-title-block">
+                                <div class="sensor-icon-wrap bg-temp">
+                                    <i class="fa-solid fa-temperature-half"></i>
+                                </div>
+                                <div>
+                                    <h4>DHT22 - Temperatura</h4>
+                                    <span class="sensor-id">ESP32_PIN_GPIO14</span>
+                                </div>
+                            </div>
+                            <div class="gauge-display">
+                                <div class="gauge-value-wrap">
+                                    <span class="gauge-value" id="gauge-val-temp-dht">--.-</span>
+                                    <span class="gauge-unit">°C</span>
+                                </div>
+                                <div class="progress-bar-wrap">
+                                    <div class="progress-bar-fill bg-gradient-temp" id="gauge-progress-temp-dht" style="width: 0%"></div>
+                                </div>
+                                <div class="gauge-range-labels">
+                                    <span>-10°C (Min)</span>
+                                    <span>50°C (Max)</span>
+                                </div>
+                            </div>
+                            <ul class="sensor-meta-list">
+                                <li>
+                                    <span class="meta-name">Umbral Critico Superior</span>
+                                    <span class="meta-val">38.0 °C</span>
+                                </li>
+                                <li>
+                                    <span class="meta-name">Umbral Critico Inferior</span>
+                                    <span class="meta-val">5.0 °C</span>
+                                </li>
+                                <li>
+                                    <span class="meta-name">Margen de Error</span>
+                                    <span class="meta-val">+/- 0.5 °C</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Sensor: Humedad DHT22 -->
+                        <div class="sensor-detail-card glass-card">
+                            <div class="sensor-title-block">
+                                <div class="sensor-icon-wrap bg-hum">
+                                    <i class="fa-solid fa-droplet"></i>
+                                </div>
+                                <div>
+                                    <h4>DHT22 - Humedad Relativa</h4>
+                                    <span class="sensor-id">ESP32_PIN_GPIO14</span>
+                                </div>
+                            </div>
+                            <div class="gauge-display">
+                                <div class="gauge-value-wrap">
+                                    <span class="gauge-value" id="gauge-val-humidity">--</span>
+                                    <span class="gauge-unit">%</span>
+                                </div>
+                                <div class="progress-bar-wrap">
+                                    <div class="progress-bar-fill bg-gradient-hum" id="gauge-progress-humidity" style="width: 0%"></div>
+                                </div>
+                                <div class="gauge-range-labels">
+                                    <span>0% (Seco)</span>
+                                    <span>100% (Saturado)</span>
+                                </div>
+                            </div>
+                            <ul class="sensor-meta-list">
+                                <li>
+                                    <span class="meta-name">Umbral Critico Superior</span>
+                                    <span class="meta-val">95% UR</span>
+                                </li>
+                                <li>
+                                    <span class="meta-name">Umbral Critico Inferior</span>
+                                    <span class="meta-val">20% UR</span>
+                                </li>
+                                <li>
+                                    <span class="meta-name">Margen de Error</span>
+                                    <span class="meta-val">+/- 2% UR</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Sensor: Presion BMP280 -->
+                        <div class="sensor-detail-card glass-card">
+                            <div class="sensor-title-block">
+                                <div class="sensor-icon-wrap bg-pres">
+                                    <i class="fa-solid fa-gauge-high"></i>
+                                </div>
+                                <div>
+                                    <h4>BMP280 - Presion Atmosferica</h4>
+                                    <span class="sensor-id">ESP32_PIN_I2C_SDA_SCL</span>
+                                </div>
+                            </div>
+                            <div class="gauge-display">
+                                <div class="gauge-value-wrap">
+                                    <span class="gauge-value" id="gauge-val-pressure">----</span>
+                                    <span class="gauge-unit">hPa</span>
+                                </div>
+                                <div class="progress-bar-wrap">
+                                    <div class="progress-bar-fill bg-gradient-pres" id="gauge-progress-pressure" style="width: 0%"></div>
+                                </div>
+                                <div class="gauge-range-labels">
+                                    <span>900 hPa</span>
+                                    <span>1100 hPa</span>
+                                </div>
+                            </div>
+                            <ul class="sensor-meta-list">
+                                <li>
+                                    <span class="meta-name">Lectura Equivalente</span>
+                                    <span class="meta-val" id="pressure-atmosphere">-- atm</span>
+                                </li>
+                                <li>
+                                    <span class="meta-name">Temperatura del Sensor BMP</span>
+                                    <span class="meta-val" id="gauge-val-temp-bmp">--.- °C</span>
+                                </li>
+                                <li>
+                                    <span class="meta-name">Margen de Error</span>
+                                    <span class="meta-val">+/- 0.12 hPa</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Sensor: Lluvia Analogo -->
+                        <div class="sensor-detail-card glass-card">
+                            <div class="sensor-title-block">
+                                <div class="sensor-icon-wrap bg-rain">
+                                    <i class="fa-solid fa-cloud-showers-heavy"></i>
+                                </div>
+                                <div>
+                                    <h4>Sensor de Precipitacion FC-37</h4>
+                                    <span class="sensor-id">ESP32_PIN_ADC_A0</span>
+                                </div>
+                            </div>
+                            <div class="gauge-display">
+                                <div class="gauge-value-wrap">
+                                    <span class="gauge-value" id="gauge-val-rain">----</span>
+                                    <span class="gauge-unit">ADC</span>
+                                </div>
+                                <div class="progress-bar-wrap">
+                                    <div class="progress-bar-fill bg-gradient-rain" id="gauge-progress-rain" style="width: 0%"></div>
+                                </div>
+                                <div class="gauge-range-labels">
+                                    <span>4095 (Seco)</span>
+                                    <span>0 (Mojado)</span>
+                                </div>
+                            </div>
+                            <ul class="sensor-meta-list">
+                                <li>
+                                    <span class="meta-name">Estado Detectado</span>
+                                    <span class="meta-val" id="gauge-val-rain-status">Sin datos</span>
+                                </li>
+                                <li>
+                                    <span class="meta-name">Tipo de Sensor</span>
+                                    <span class="meta-val">Resistivo de lluvia</span>
+                                </li>
+                                <li>
+                                    <span class="meta-name">Frecuencia de Lectura</span>
+                                    <span class="meta-val">Cada 5 segundos</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 3. SECCIÓN GRÁFICAS EN TIEMPO REAL -->
+                <section id="section-charts" class="dashboard-section">
+                    <div class="section-header">
+                        <h2>Analisis Temporal Grafico</h2>
+                        <p class="section-description">Monitoreo de comportamiento historico reciente en tiempo real mediante graficas dinamicas lineales.</p>
+                    </div>
+
+                    <div class="charts-layout-grid">
+                        
+                        <!-- Gráfica: Temperatura (Comparativa DHT vs BMP) -->
+                        <div class="chart-container-card glass-card">
+                            <div class="chart-card-header">
+                                <div>
+                                    <h4>Grafica Comparativa de Temperatura</h4>
+                                    <span class="chart-desc">Comparativa del sensor DHT22 frente al sensor BMP280 en tiempo real</span>
+                                </div>
+                                <span class="chart-badge bg-temp-badge">
+                                    <i class="fa-solid fa-thermometer-half"></i> Termico
+                                </span>
+                            </div>
+                            <div class="chart-canvas-wrap">
+                                <canvas id="chartTemperature"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfica: Humedad -->
+                        <div class="chart-container-card glass-card">
+                            <div class="chart-card-header">
+                                <div>
+                                    <h4>Grafica de Humedad Relativa</h4>
+                                    <span class="chart-desc">Variacion de humedad ambiental en los ultimos minutos</span>
+                                </div>
+                                <span class="chart-badge bg-hum-badge">
+                                    <i class="fa-solid fa-droplet"></i> Hidrico
+                                </span>
+                            </div>
+                            <div class="chart-canvas-wrap">
+                                <canvas id="chartHumidity"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Gráfica: Presión -->
+                        <div class="chart-container-card glass-card">
+                            <div class="chart-card-header">
+                                <div>
+                                    <h4>Grafica de Presion Atmosferica</h4>
+                                    <span class="chart-desc">Monitoreo barometrico continuo para prediccion climatica</span>
+                                </div>
+                                <span class="chart-badge bg-pres-badge">
+                                    <i class="fa-solid fa-gauge-high"></i> Barometrico
+                                </span>
+                            </div>
+                            <div class="chart-canvas-wrap">
+                                <canvas id="chartPressure"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 4. SECCIÓN SISTEMA DE RECOMENDACIÓN INTELIGENTE -->
+                <section id="section-recommendations" class="dashboard-section">
+                    <div class="section-header">
+                        <h2>Recomendador Inteligente de Cultivos de Precision</h2>
+                        <p class="section-description">Analisis agrometeorologico detallado en tiempo real. Evaluacion individualizada de viabilidad para cada cultivo sugerido.</p>
+                    </div>
+
+                    <!-- Panel de Resumen del Estado Climático Actual -->
+                    <div class="climate-summary-strip glass-card">
+                        <div class="summary-strip-layout">
+                            <div class="summary-metric-item">
+                                <span class="strip-label">Temperatura DHT22</span>
+                                <span class="strip-value" id="strip-temp">--.- C</span>
+                            </div>
+                            <div class="summary-metric-item">
+                                <span class="strip-label">Humedad Ambiental</span>
+                                <span class="strip-value" id="strip-hum">--% UR</span>
+                            </div>
+                            <div class="summary-metric-item">
+                                <span class="strip-label">Precipitacion (ADC)</span>
+                                <span class="strip-value" id="strip-rain">---- ADC</span>
+                            </div>
+                            <div class="summary-metric-item">
+                                <span class="strip-label">Categoria Climatica Activa</span>
+                                <span class="strip-badge-status" id="strip-category-badge">DETECTANDO...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor Principal de las Tarjetas de Cultivos -->
+                    <h3 class="subsection-title">Cultivos Optimos Recomendados en Vivo</h3>
+                    <div class="crops-enhanced-grid" id="recommended-crops-container">
+                        <div class="crops-loading-state glass-card">
+                            <div class="table-spinner"></div>
+                            <p>Esperando la conexion con Supabase para aplicar algoritmos de recomendacion...</p>
+                        </div>
+                    </div>
+
+                    <!-- Grid estático de todos los Grupos de Cultivo para consulta general -->
+                    <h3 class="subsection-title" style="margin-top: 40px;">Matriz General de Reglas Climaticas</h3>
+                    <div class="rules-grid">
+
+                        <!-- Grupo 1: Clima Caluroso y Húmedo -->
+                        <div class="rule-card glass-card" id="rule-group-1">
+                            <div class="rule-card-header">
+                                <div class="rule-badge bg-badge-humid">Caluroso y Humedo</div>
+                                <h4>Arroz, Platano, Caña de Azucar</h4>
+                            </div>
+                            <div class="rule-card-body">
+                                <span class="rule-condition">Si Temperatura > 25°C e Humedad > 70%</span>
+                                <p class="rule-text">Condiciones tropicales humedas. Los cultivos con alta demanda de agua y transpiracion foliar prosperan en estos rangos, requiriendo suelos arcillosos que retengan agua.</p>
+                            </div>
+                        </div>
+
+                        <!-- Grupo 2: Clima Caluroso y Seco -->
+                        <div class="rule-card glass-card" id="rule-group-2">
+                            <div class="rule-card-header">
+                                <div class="rule-badge bg-badge-dry">Caluroso y Seco</div>
+                                <h4>Yuca, Sorgo, Algodon</h4>
+                            </div>
+                            <div class="rule-card-body">
+                                <span class="rule-condition">Si Temperatura > 30°C e Humedad < 50%</span>
+                                <p class="rule-text">Condiciones de alta evaporacion. Cultivos altamente resistentes al estres hidrico y temperaturas elevadas, capaces de prosperar en suelos arenosos de facil drenaje.</p>
+                            </div>
+                        </div>
+
+                        <!-- Grupo 3: Clima Templado y Húmedo -->
+                        <div class="rule-card glass-card" id="rule-group-3">
+                            <div class="rule-card-header">
+                                <div class="rule-badge bg-badge-temperate">Templado y Humedo</div>
+                                <h4>Cafe, Cacao, Aguacate</h4>
+                            </div>
+                            <div class="rule-card-body">
+                                <span class="rule-condition">Si Temp [18°C - 25°C] e Humedad >= 60%</span>
+                                <p class="rule-text">Condiciones de sombrio y montanas. Temperaturas intermedias y humedad constante evitan la marchitez foliar rapida, optimas para el llenado y maduracion de frutos de valor.</p>
+                            </div>
+                        </div>
+
+                        <!-- Grupo 4: Clima General / Templado Seco -->
+                        <div class="rule-card glass-card" id="rule-group-default">
+                            <div class="rule-card-header">
+                                <div class="rule-badge bg-badge-standard">Condiciones Estandar</div>
+                                <h4>Maiz, Tomate, Frijol</h4>
+                            </div>
+                            <div class="rule-card-body">
+                                <span class="rule-condition">Si no se cumple ninguna de las anteriores</span>
+                                <p class="rule-text">Condiciones versatiles de transicion. Aptas para agricultura tradicional con ciclo vegetativo rapido y requerimientos moderados tanto termicos como hidricos.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 5. SECCIÓN ALERTAS INTELIGENTES -->
+                <section id="section-alerts" class="dashboard-section">
+                    <div class="section-header">
+                        <h2>Sistema de Alertas Inteligentes</h2>
+                        <p class="section-description">Analisis automatizado de limites criticos y alerta temprana para proteger los cultivos de anomalias climaticas.</p>
+                    </div>
+
+                    <div class="alerts-layout-container">
+                        
+                        <!-- Panel de Estado General de Alerta -->
+                        <div class="alert-status-card glass-card" id="alert-main-status-panel">
+                            <div class="alert-status-header">
+                                <div class="alert-indicator-icon" id="alert-status-icon-box">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <div class="alert-status-title">
+                                    <h3 id="alert-status-title">Buscando Estado</h3>
+                                    <p id="alert-status-subtitle">Evaluando integridad de sensores en la red IoT</p>
+                                </div>
+                            </div>
+                            <div class="alert-status-body">
+                                <p id="alert-status-description" class="alert-description-text">Cargando datos operativos. Los limites se comprueban cada 5 segundos al recibir paquetes del ESP32.</p>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Tabla de Limites de Alerta -->
+                        <div class="detail-panel glass-card">
+                            <h3>Umbrales Operativos de Seguridad</h3>
+                            <div class="table-responsive">
+                                <table class="alert-thresholds-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Parametro</th>
+                                            <th>Rango Normal (Verde)</th>
+                                            <th>Rango Advertencia (Amarillo)</th>
+                                            <th>Rango Critico (Rojo)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Temperatura DHT</strong></td>
+                                            <td><span id="table-val-t-normal">18.0 °C a 28.0 °C</span></td>
+                                            <td><span id="table-val-t-warning">28.1 °C a 38.0 °C o 17.9 °C a 10.0 °C</span></td>
+                                            <td><span id="table-val-t-danger">Mayor a 38.0 °C o Menor a 5.0 °C</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Humedad Relativa</strong></td>
+                                            <td><span id="table-val-h-normal">50% a 85% UR</span></td>
+                                            <td><span id="table-val-h-warning">85% a 95% UR o 49% a 20% UR</span></td>
+                                            <td><span id="table-val-h-danger">Mayor a 95% UR o Menor a 20% UR</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Precipitacion (ADC)</strong></td>
+                                            <td><span id="table-val-r-normal">Mayor a 3000 (Seco)</span></td>
+                                            <td><span id="table-val-r-warning">1500 a 3000 (Lluvia Ligera)</span></td>
+                                            <td><span id="table-val-r-danger">Menor a 1500 (Lluvia Fuerte / Tormenta)</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Presion Atmosferica</strong></td>
+                                            <td>995 hPa a 1020 hPa</td>
+                                            <td>1020 a 1040 hPa o 985 a 995 hPa</td>
+                                            <td>Mayor a 1040 hPa o Menor a 985 hPa</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Registro Log de ultimos eventos de Alerta -->
+                        <div class="alert-log-panel glass-card">
+                            <div class="log-header">
+                                <h3>Registro Historico de Eventos y Alarmas</h3>
+                                <button id="clear-alerts-btn" class="secondary-btn">Limpiar registro</button>
+                            </div>
+                            <div class="alert-log-list" id="alert-log-container">
+                                <div class="log-empty-msg">No se han registrado eventos anomalos en la sesion actual.</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- 6. SECCIÓN HISTORIAL DE DATOS -->
+                <section id="section-history" class="dashboard-section">
+                    <div class="section-header">
+                        <h2>Historial Climatico Completo</h2>
+                        <p class="section-description">Listado interactivo de las ultimas lecturas del ESP32 registradas en Supabase.</p>
+                    </div>
+
+                    <!-- Controles de Busqueda y Exportación -->
+                    <div class="history-controls glass-card">
+                        <div class="search-input-wrap">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="history-search-input" placeholder="Buscar por fecha, lluvia o valor termico...">
+                        </div>
+                        <div class="control-actions">
+                            <button id="refresh-history-btn" class="primary-btn">
+                                <i class="fa-solid fa-rotate"></i> Actualizar Tabla
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Historial -->
+                    <div class="history-table-container glass-card">
+                        <div class="table-responsive">
+                            <table class="history-data-table" id="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha / Hora</th>
+                                        <th>Temp. DHT (°C)</th>
+                                        <th>Humedad (%)</th>
+                                        <th>Temp. BMP (°C)</th>
+                                        <th>Presion (hPa)</th>
+                                        <th>Lluvia (ADC)</th>
+                                        <th>Estado Lluvia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-table-body">
+                                    <tr>
+                                        <td colspan="7" class="table-loading-msg">
+                                            <div class="table-spinner"></div>
+                                            <span>Esperando conexion de base de datos...</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-pagination">
+                            <span id="history-count">Mostrando 0 lecturas</span>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 7. SECCIÓN CONFIGURACIÓN DE UMBRALES DE ALERTA -->
+                <section id="section-config" class="dashboard-section">
+                    <div class="section-header">
+                        <h2>Configuracion de Limites y Alertas</h2>
+                        <p class="section-description">Establece los rangos maximos y minimos para el disparo de alertas rojas y amarillas. Los cambios se guardaran localmente y se aplicaran de inmediato.</p>
+                    </div>
+
+                    <div class="config-layout-container">
+                        
+                        <!-- Formulario de Configuración de Umbrales -->
+                        <form id="threshold-config-form" class="glass-card">
+                            <h3 class="subsection-title"><i class="fa-solid fa-bell-slash" style="margin-right: 8px; color: var(--accent);"></i>Umbrales Operativos del Cultivo</h3>
+                            
+                            <div class="form-columns-grid">
+                                
+                                <!-- Columna 1: Límites de Temperatura -->
+                                <div class="form-column">
+                                    <h4 class="form-column-title">Temperatura DHT22 (°C)</h4>
+                                    
+                                    <div class="form-group">
+                                        <label for="cfg-temp-red-high">Temperatura Critica Alta (Alerta Roja)</label>
+                                        <input type="number" id="cfg-temp-red-high" step="0.1" value="38.0" required>
+                                        <span class="input-tip">Dispara alerta roja si se supera este valor.</span>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="cfg-temp-yellow-high">Temperatura de Advertencia Alta (Alerta Amarilla)</label>
+                                        <input type="number" id="cfg-temp-yellow-high" step="0.1" value="28.1" required>
+                                        <span class="input-tip">Margen superior preventivo antes del estres termico extremo.</span>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="cfg-temp-yellow-low">Temperatura de Advertencia Baja (Alerta Amarilla)</label>
+                                        <input type="number" id="cfg-temp-yellow-low" step="0.1" value="17.9" required>
+                                        <span class="input-tip">Margen inferior preventivo antes del estres por enfriamiento.</span>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="cfg-temp-red-low">Temperatura Critica Baja (Alerta Roja)</label>
+                                        <input type="number" id="cfg-temp-red-low" step="0.1" value="5.0" required>
+                                        <span class="input-tip">Riesgo inminente de congelamiento y muerte foliar.</span>
+                                    </div>
+                                </div>
+
+                                <!-- Columna 2: Límites de Humedad -->
+                                <div class="form-column">
+                                    <h4 class="form-column-title">Humedad Relativa (% UR)</h4>
+                                    
+                                    <div class="form-group">
+                                        <label for="cfg-hum-red-high">Humedad Critica Alta (Alerta Roja)</label>
+                                        <input type="number" id="cfg-hum-red-high" min="0" max="100" value="95" required>
+                                        <span class="input-tip">Saturacion foliar. Fomenta hongos fito-patogenos.</span>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="cfg-hum-yellow-high">Humedad de Advertencia Alta (Alerta Amarilla)</label>
+                                        <input type="number" id="cfg-hum-yellow-high" min="0" max="100" value="85" required>
+                                        <span class="input-tip">Margen superior preventivo antes del exceso hídrico foliar.</span>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="cfg-hum-yellow-low">Humedad de Advertencia Baja (Alerta Amarilla)</label>
+                                        <input type="number" id="cfg-hum-yellow-low" min="0" max="100" value="50" required>
+                                        <span class="input-tip">Margen inferior preventivo antes de la deshidratacion estomatica.</span>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="cfg-hum-red-low">Humedad Critica Baja (Alerta Roja)</label>
+                                        <input type="number" id="cfg-hum-red-low" min="0" max="100" value="20" required>
+                                        <span class="input-tip">Estres hidrico severo y marchitez permanente.</span>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="form-columns-grid" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                                <!-- Columna 3: Precipitaciones (FC-37) -->
+                                <div class="form-column">
+                                    <h4 class="form-column-title">Precipitacion (ADC Lluvia)</h4>
+                                    
+                                    <div class="form-group">
+                                        <label for="cfg-rain-red">Umbral de Tormenta / Lluvia Fuerte (Alerta Roja)</label>
+                                        <input type="number" id="cfg-rain-red" min="0" max="4095" value="1500" required>
+                                        <span class="input-tip">El sensor de lluvia ADC baja de este valor durante lluvias severas.</span>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="cfg-rain-yellow">Umbral de Llovizna / Lluvia Frecuente (Alerta Amarilla)</label>
+                                        <input type="number" id="cfg-rain-yellow" min="0" max="4095" value="3000" required>
+                                        <span class="input-tip">Sensor ADC entra en este rango preventivo de aporte pluvial natural.</span>
+                                    </div>
+                                </div>
+
+                                <!-- Columna de Recomendación Informativa -->
+                                <div class="form-column flex-column-justify">
+                                    <div class="info-alert-box-static">
+                                        <h5><i class="fa-solid fa-circle-info" style="color: var(--accent); margin-right: 6px;"></i>Informacion de Seguridad</h5>
+                                        <p>Estos parametros definen el comportamiento de las alertas graficas y notificaciones del sistema de precision. El jurado puede evaluar los cambios de estado en vivo forzando umbrales mas estrechos que coincidan con tus lecturas actuales.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones de Acción del Formulario -->
+                            <div class="form-actions-wrap" style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 12px;">
+                                <button type="button" id="reset-thresholds-btn" class="secondary-btn">
+                                    <i class="fa-solid fa-undo"></i> Restaurar Predeterminados
+                                </button>
+                                <button type="submit" class="primary-btn">
+                                    <i class="fa-solid fa-floppy-disk"></i> Guardar Umbrales
+                                </button>
+                            </div>
+                        </form>
+
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        <!-- Footer del Dashboard -->
+        <footer class="app-footer">
+            <p>PROYECTO UNIVERSITARIO - SISTEMA IoT DE MONITOREO CLIMÁTICO CON RECOMENDACIÓN INTELIGENTE DE CULTIVOS EN TIEMPO REAL</p>
+            <p class="footer-copy">&copy; 2026 &nbsp;|&nbsp; Materia: Internet de las Cosas &nbsp;|&nbsp; Ingenieria en Sistemas</p>
+        </footer>
+
+    </div>
+
+    <!-- Scripts de la Aplicacion -->
+    <script src="app.js"></script>
+</body>
+</html>
